@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Text;
 
 namespace TgLlmBot.Utils;
 
@@ -12,7 +13,7 @@ public static class SurrogatePairSanitizer
             return null;
         }
 
-        var sb = new System.Text.StringBuilder(input.Length);
+        var sb = new StringBuilder(input.Length);
 
         for (var i = 0; i < input.Length; i++)
         {
