@@ -46,26 +46,29 @@ public class DefaultLlmLimitsService : ILlmLimitsService
 
     public async Task<bool> IsLLmInteractionAllowedAsync(long chatId, long userId, CancellationToken cancellationToken)
     {
-        await using (var asyncScope = _serviceScopeFactory.CreateAsyncScope())
-        {
-            var dbContext = asyncScope.ServiceProvider.GetRequiredService<BotDbContext>();
-            var date = _timeProvider.GetUtcNow().Date.ToUniversalTime();
-            var dbLimits = await dbContext.Limits.AsNoTracking()
-                .Where(x => x.UserId == userId && x.ChatId == chatId)
-                .FirstOrDefaultAsync(cancellationToken);
-            if (dbLimits is not null)
-            {
-                var dbDailyUsage = await dbContext.Usage.AsNoTracking()
-                    .Where(x => x.UserId == userId && x.Date == date && x.ChatId == chatId)
-                    .FirstOrDefaultAsync(cancellationToken);
-                if (dbDailyUsage is not null)
-                {
-                    return dbDailyUsage.Used < dbLimits.Limit;
-                }
-            }
+        await using var asyncScope = _serviceScopeFactory.CreateAsyncScope();
 
+        var dbContext = asyncScope.ServiceProvider.GetRequiredService<BotDbContext>();
+        var date = _timeProvider.GetUtcNow().Date.ToUniversalTime();
+        var dbLimits = await dbContext.Limits.AsNoTracking()
+            .Where(x => x.UserId == userId && x.ChatId == chatId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (dbLimits is null)
+        {
             return true;
         }
+
+        if (dbLimits.Limit == 0)
+        {
+            return false;
+        }
+
+        var dbDailyUsage = await dbContext.Usage.AsNoTracking()
+            .Where(x => x.UserId == userId && x.Date == date && x.ChatId == chatId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return (dbDailyUsage?.Used ?? 0) < dbLimits.Limit;
     }
 
     public async Task SetDailyLimitsAsync(long chatId, long userId, int limit, CancellationToken cancellationToken)
