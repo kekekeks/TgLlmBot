@@ -86,7 +86,7 @@ public class ResetChatSystemPromptCommandHandler : AbstractCommandHandler<ResetC
     {
         if (command.Message.Chat.Type is ChatType.Group or ChatType.Supergroup && command.Message.From is not null)
         {
-            var admins = await _bot.GetChatAdministrators(command.Message.Chat, cancellationToken);
+            var admins = await _bot.GetChatAdministrators(command.Message.Chat, cancellationToken: cancellationToken);
             return admins.Any(x => x.User.Id == command.Message.From.Id);
         }
 
