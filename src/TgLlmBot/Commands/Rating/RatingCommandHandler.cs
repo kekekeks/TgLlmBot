@@ -423,7 +423,8 @@ public class RatingCommandHandler : AbstractCommandHandler<RatingCommand>
         foreach (var chatHistoryMessage in history)
         {
             var json = JsonSerializer.Serialize(chatHistoryMessage, HistorySerializationOptions);
-            result.Add(new(ChatRole.User, json));
+            var role = chatHistoryMessage.IsLlmReplyToMessage ? ChatRole.Assistant : ChatRole.User;
+            result.Add(new(role, json));
         }
 
         return result.ToArray();
