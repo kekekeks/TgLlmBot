@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -443,8 +443,7 @@ public partial class DefaultLlmChatHandler : ILlmChatHandler
         foreach (var chatHistoryMessage in history)
         {
             var json = JsonSerializer.Serialize(chatHistoryMessage, HistorySerializationOptions);
-            var role = chatHistoryMessage.IsLlmReplyToMessage ? ChatRole.Assistant : ChatRole.User;
-            result.Add(new(role, json));
+            result.Add(new(ChatRole.User, json));
         }
 
         result.Add(new(ChatRole.User,
