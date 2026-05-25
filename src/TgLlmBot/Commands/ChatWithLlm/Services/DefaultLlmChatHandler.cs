@@ -134,6 +134,7 @@ public partial class DefaultLlmChatHandler : ILlmChatHandler
                 // Temperature = 0.8f,
                 // TopK = 40,
                 // TopP = 0.8f,
+                MaxOutputTokens = 81920,
                 AllowMultipleToolCalls = true,
                 ToolMode = new AutoChatToolMode()
             };
@@ -175,7 +176,7 @@ public partial class DefaultLlmChatHandler : ILlmChatHandler
                     {
                         response = await _bot.SendMessage(
                             command.Message.Chat,
-                            finalText[i],
+                            $"{finalText[i]}".Trim(),
                             ParseMode.MarkdownV2,
                             new()
                             {
@@ -187,7 +188,7 @@ public partial class DefaultLlmChatHandler : ILlmChatHandler
                     {
                         response = await _bot.SendMessage(
                             command.Message.Chat,
-                            finalText[i],
+                            $"{finalText[i]}".Trim(),
                             ParseMode.MarkdownV2,
                             cancellationToken: cancellationToken);
                     }

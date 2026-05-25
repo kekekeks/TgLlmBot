@@ -49,6 +49,58 @@ public sealed class TelegramMarkdownRenderer
         return _output.ToString().Trim();
     }
 
+    public string[] RenderParted(MarkdownDocument document, int partLengthLimit)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        _output.Clear();
+
+        // Render each top-level block independently
+        var renderedBlocks = new List<string>();
+        foreach (var block in document)
+        {
+            var startLen = _output.Length;
+            RenderBlock(block);
+            var blockText = _output.ToString(startLen, _output.Length - startLen);
+            renderedBlocks.Add(blockText);
+        }
+
+        // Merge blocks into parts respecting the length limit
+        var results = new List<string>();
+        var currentPart = new StringBuilder();
+
+        foreach (var blockText in renderedBlocks)
+        {
+            if (currentPart.Length == 0)
+            {
+                currentPart.Append(blockText);
+            }
+            else if (currentPart.Length + blockText.Length <= partLengthLimit)
+            {
+                currentPart.Append(blockText);
+            }
+            else
+            {
+                var trimmed = currentPart.ToString().Trim();
+                if (!string.IsNullOrWhiteSpace(trimmed))
+                {
+                    results.Add(trimmed);
+                }
+
+                currentPart.Clear();
+                currentPart.Append(blockText);
+            }
+        }
+
+        // Finalize last part
+        var lastTrimmed = currentPart.ToString().Trim();
+        if (!string.IsNullOrWhiteSpace(lastTrimmed))
+        {
+            results.Add(lastTrimmed);
+        }
+
+        return results.ToArray();
+    }
+
     private void RenderBlock(Block block)
     {
         switch (block)
