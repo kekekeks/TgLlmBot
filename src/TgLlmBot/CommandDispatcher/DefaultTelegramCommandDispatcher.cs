@@ -123,89 +123,93 @@ public class DefaultTelegramCommandDispatcher : ITelegramCommandDispatcher
         await _messageStorage.StoreMessageAsync(message, self, cancellationToken);
         // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
         var rawPrompt = $"{message.Text?.Trim()?.ToLowerInvariant()}";
-        switch (rawPrompt)
+        if (rawPrompt.StartsWith(_options.CommandPrefix, StringComparison.Ordinal))
         {
-            case "!help":
-                {
-                    var command = new DisplayHelpCommand(message, type);
-                    await _displayHelp.HandleAsync(command, cancellationToken);
-                    return;
-                }
-            case "!ping":
-                {
-                    var command = new PingCommand(message, type);
-                    await _ping.HandleAsync(command, cancellationToken);
-                    return;
-                }
-            case "!repo":
-                {
-                    var command = new RepoCommand(message, type);
-                    await _repo.HandleAsync(command, cancellationToken);
-                    return;
-                }
-            case "!model":
-                {
-                    var command = new ModelCommand(message, type);
-                    await _model.HandleAsync(command, cancellationToken);
-                    return;
-                }
-            case "!usage":
-                {
-                    var command = new UsageCommand(message, type);
-                    await _usage.HandleAsync(command, cancellationToken);
-                    return;
-                }
-            case "!rating":
-                {
-                    var command = new RatingCommand(message, type, self);
-                    await _rating.HandleAsync(command, cancellationToken);
-                    return;
-                }
-            case "!chat_role_reset":
-                {
-                    var command = new ResetChatSystemPromptCommand(message, type, self);
-                    await _resetChatSystemPrompt.HandleAsync(command, cancellationToken);
-                    return;
-                }
-            case "!personal_role_reset":
-                {
-                    var command = new ResetPersonalSystemPromptCommand(message, type, self);
-                    await _resetPersonalSystemPrompt.HandleAsync(command, cancellationToken);
-                    return;
-                }
-            case "!personal_role_show":
-                {
-                    var command = new ShowPersonalSystemPromptCommand(message, type, self);
-                    await _showPersonalSystemPrompt.HandleAsync(command, cancellationToken);
-                    return;
-                }
-            case "!chat_role_show":
-                {
-                    var command = new ShowChatSystemPromptCommand(message, type, self);
-                    await _showChatSystemPrompt.HandleAsync(command, cancellationToken);
-                    return;
-                }
-        }
+            var commandText = rawPrompt[_options.CommandPrefix.Length..];
+            switch (commandText)
+            {
+                case "help":
+                    {
+                        var command = new DisplayHelpCommand(message, type);
+                        await _displayHelp.HandleAsync(command, cancellationToken);
+                        return;
+                    }
+                case "ping":
+                    {
+                        var command = new PingCommand(message, type);
+                        await _ping.HandleAsync(command, cancellationToken);
+                        return;
+                    }
+                case "repo":
+                    {
+                        var command = new RepoCommand(message, type);
+                        await _repo.HandleAsync(command, cancellationToken);
+                        return;
+                    }
+                case "model":
+                    {
+                        var command = new ModelCommand(message, type);
+                        await _model.HandleAsync(command, cancellationToken);
+                        return;
+                    }
+                case "usage":
+                    {
+                        var command = new UsageCommand(message, type);
+                        await _usage.HandleAsync(command, cancellationToken);
+                        return;
+                    }
+                case "rating":
+                    {
+                        var command = new RatingCommand(message, type, self);
+                        await _rating.HandleAsync(command, cancellationToken);
+                        return;
+                    }
+                case "chat_role_reset":
+                    {
+                        var command = new ResetChatSystemPromptCommand(message, type, self);
+                        await _resetChatSystemPrompt.HandleAsync(command, cancellationToken);
+                        return;
+                    }
+                case "personal_role_reset":
+                    {
+                        var command = new ResetPersonalSystemPromptCommand(message, type, self);
+                        await _resetPersonalSystemPrompt.HandleAsync(command, cancellationToken);
+                        return;
+                    }
+                case "personal_role_show":
+                    {
+                        var command = new ShowPersonalSystemPromptCommand(message, type, self);
+                        await _showPersonalSystemPrompt.HandleAsync(command, cancellationToken);
+                        return;
+                    }
+                case "chat_role_show":
+                    {
+                        var command = new ShowChatSystemPromptCommand(message, type, self);
+                        await _showChatSystemPrompt.HandleAsync(command, cancellationToken);
+                        return;
+                    }
+            }
 
-        if (rawPrompt.StartsWith("!chat_role", StringComparison.Ordinal))
-        {
-            var command = new SetChatSystemPromptCommand(message, type, self);
-            await _setChatSystemPrompt.HandleAsync(command, cancellationToken);
-            return;
-        }
+            if (commandText.StartsWith("chat_role", StringComparison.Ordinal))
+            {
+                var command = new SetChatSystemPromptCommand(message, type, self);
+                await _setChatSystemPrompt.HandleAsync(command, cancellationToken);
+                return;
+            }
 
-        if (rawPrompt.StartsWith("!personal_role", StringComparison.Ordinal))
-        {
-            var command = new SetPersonalSystemPromptCommand(message, type, self);
-            await _setPersonalSystemPrompt.HandleAsync(command, cancellationToken);
-            return;
-        }
+            if (commandText.StartsWith("personal_role", StringComparison.Ordinal))
+            {
+                var command = new SetPersonalSystemPromptCommand(message, type, self);
+                await _setPersonalSystemPrompt.HandleAsync(command, cancellationToken);
+                return;
+            }
 
-        if (rawPrompt.StartsWith("!set_limit", StringComparison.Ordinal))
-        {
-            var command = new SetLimitCommand(message, type, self);
-            await _setLimit.HandleAsync(command, cancellationToken);
-            return;
+            if (commandText.StartsWith("set_limit", StringComparison.Ordinal))
+            {
+                var command = new SetLimitCommand(message, type, self);
+                await _setLimit.HandleAsync(command, cancellationToken);
+                return;
+            }
         }
 
         var prompt = message.Text ?? message.Caption;

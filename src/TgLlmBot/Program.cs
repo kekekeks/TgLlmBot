@@ -175,7 +175,7 @@ public partial class Program
         });
         builder.Services.AddSingleton<ITelegramRequestHandler, DefaultTelegramRequestHandler>();
         // Command dispatch
-        builder.Services.AddSingleton(new DefaultTelegramCommandDispatcherOptions(config.Telegram.BotName));
+        builder.Services.AddSingleton(new DefaultTelegramCommandDispatcherOptions(config.Telegram.BotName, config.Telegram.CommandPrefix));
         builder.Services.AddSingleton<ITelegramCommandDispatcher, DefaultTelegramCommandDispatcher>();
         // Command handlers
         builder.Services.AddSingleton(new DisplayHelpCommandHandlerOptions(config.Telegram.BotName));

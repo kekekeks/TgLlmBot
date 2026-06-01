@@ -18,4 +18,8 @@ public class TelegramOptions
     [MinLength(1)]
     [MaxLength(100)]
     public string BotName { get; set; } = default!;
+
+    // Optional: prefix for the "!"-style commands (e.g. !help, !ping). Defaults to "!" when empty.
+    [MaxLength(100)]
+    public string? CommandPrefix { get; set; }
 }
