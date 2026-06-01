@@ -124,17 +124,19 @@ public partial class Program
         {
             var toolsProvider = asyncScope.ServiceProvider.GetRequiredService<DefaultMcpToolsProvider>();
 
-            var github = asyncScope.ServiceProvider.GetRequiredKeyedService<McpClient>(McpClientName.Github);
-            var brave = asyncScope.ServiceProvider.GetRequiredKeyedService<McpClient>(McpClientName.Brave);
-            var context7 = asyncScope.ServiceProvider.GetRequiredKeyedService<McpClient>(McpClientName.Context7);
+            // Only the MCP clients whose config section is present get registered, so resolve
+            // them optionally and skip the ones that are absent.
+            foreach (var clientName in Enum.GetValues<McpClientName>())
+            {
+                var client = asyncScope.ServiceProvider.GetKeyedService<McpClient>(clientName);
+                if (client is null)
+                {
+                    continue;
+                }
 
-            var githubTools = await github.ListToolsAsync();
-            var braveTools = await brave.ListToolsAsync();
-            var context7Tools = await context7.ListToolsAsync();
-
-            toolsProvider.AddTools(githubTools);
-            toolsProvider.AddTools(braveTools);
-            toolsProvider.AddTools(context7Tools);
+                var tools = await client.ListToolsAsync();
+                toolsProvider.AddTools(tools);
+            }
         }
     }
 
@@ -247,7 +249,7 @@ public partial class Program
                 .Build();
         });
         // LLM Chat
-        builder.Services.AddSingleton(new DefaultLlmChatHandlerOptions(config.Telegram.BotName, config.Llm.DefaultResponse));
+        builder.Services.AddSingleton(new DefaultLlmChatHandlerOptions(config.Telegram.BotName, config.Llm.DefaultResponse, config.Llm.SystemPromptTemplate));
         builder.Services.AddSingleton<ILlmChatHandler, DefaultLlmChatHandler>();
         // DataAccess
         builder.Services.AddDbContext<BotDbContext>(dbContextOptions =>
@@ -267,37 +269,48 @@ public partial class Program
         // MCP
         builder.Services.AddSingleton<DefaultMcpToolsProvider>();
         builder.Services.AddSingleton<IMcpToolsProvider>(resolver => resolver.GetRequiredService<DefaultMcpToolsProvider>());
-        // MCP - Github
-        builder.Services.AddHttpClient(DefaultGithubMcpClientFactory.GithubHttpClientName);
-        builder.Services.AddSingleton(new DefaultGithubMcpClientFactoryOptions(
-            config.Mcp.Github.PersonalAccessToken,
-            config.Mcp.Github.WorkingDirectory,
-            config.Mcp.Github.Command));
-        builder.Services.AddSingleton<IGithubMcpClientFactory, DefaultGithubMcpClientFactory>();
-        builder.Services.AddKeyedSingleton<McpClient>(McpClientName.Github,
-            (resolver, _) =>
-            {
-                var githubFactory = resolver.GetRequiredService<IGithubMcpClientFactory>();
-                return githubFactory.CreateAsync(CancellationToken.None).GetAwaiter().GetResult();
-            });
-        // MCP - Brave
-        builder.Services.AddSingleton(new DefaultBraveMcpClientFactoryOptions(config.Mcp.Brave.ApiKey));
-        builder.Services.AddSingleton<IBraveMcpClientFactory, DefaultBraveMcpClientFactory>();
-        builder.Services.AddKeyedSingleton<McpClient>(McpClientName.Brave,
-            (resolver, _) =>
-            {
-                var githubFactory = resolver.GetRequiredService<IBraveMcpClientFactory>();
-                return githubFactory.CreateAsync(CancellationToken.None).GetAwaiter().GetResult();
-            });
-        // MCP - Context7
-        builder.Services.AddSingleton(new DefaultContext7McpClientFactoryOptions(config.Mcp.Context7.ApiKey));
-        builder.Services.AddSingleton<IContext7McpClientFactory, DefaultContext7McpClientFactory>();
-        builder.Services.AddKeyedSingleton<McpClient>(McpClientName.Context7,
-            (resolver, _) =>
-            {
-                var githubFactory = resolver.GetRequiredService<IContext7McpClientFactory>();
-                return githubFactory.CreateAsync(CancellationToken.None).GetAwaiter().GetResult();
-            });
+        // MCP - Github (registered only when the "Mcp:Github" section is present)
+        if (config.Mcp.Github is not null)
+        {
+            builder.Services.AddHttpClient(DefaultGithubMcpClientFactory.GithubHttpClientName);
+            builder.Services.AddSingleton(new DefaultGithubMcpClientFactoryOptions(
+                config.Mcp.Github.PersonalAccessToken,
+                config.Mcp.Github.WorkingDirectory,
+                config.Mcp.Github.Command));
+            builder.Services.AddSingleton<IGithubMcpClientFactory, DefaultGithubMcpClientFactory>();
+            builder.Services.AddKeyedSingleton<McpClient>(McpClientName.Github,
+                (resolver, _) =>
+                {
+                    var githubFactory = resolver.GetRequiredService<IGithubMcpClientFactory>();
+                    return githubFactory.CreateAsync(CancellationToken.None).GetAwaiter().GetResult();
+                });
+        }
+
+        // MCP - Brave (registered only when the "Mcp:Brave" section is present)
+        if (config.Mcp.Brave is not null)
+        {
+            builder.Services.AddSingleton(new DefaultBraveMcpClientFactoryOptions(config.Mcp.Brave.ApiKey));
+            builder.Services.AddSingleton<IBraveMcpClientFactory, DefaultBraveMcpClientFactory>();
+            builder.Services.AddKeyedSingleton<McpClient>(McpClientName.Brave,
+                (resolver, _) =>
+                {
+                    var braveFactory = resolver.GetRequiredService<IBraveMcpClientFactory>();
+                    return braveFactory.CreateAsync(CancellationToken.None).GetAwaiter().GetResult();
+                });
+        }
+
+        // MCP - Context7 (registered only when the "Mcp:Context7" section is present)
+        if (config.Mcp.Context7 is not null)
+        {
+            builder.Services.AddSingleton(new DefaultContext7McpClientFactoryOptions(config.Mcp.Context7.ApiKey));
+            builder.Services.AddSingleton<IContext7McpClientFactory, DefaultContext7McpClientFactory>();
+            builder.Services.AddKeyedSingleton<McpClient>(McpClientName.Context7,
+                (resolver, _) =>
+                {
+                    var context7Factory = resolver.GetRequiredService<IContext7McpClientFactory>();
+                    return context7Factory.CreateAsync(CancellationToken.None).GetAwaiter().GetResult();
+                });
+        }
         // OpenRouter stats
         builder.Services.AddSingleton(new DefaultOpenRouterKeyUsageProviderOptions(config.Llm.ApiKey));
         builder.Services.AddHttpClient<IOpenRouterKeyUsageProvider, DefaultOpenRouterKeyUsageProvider>();

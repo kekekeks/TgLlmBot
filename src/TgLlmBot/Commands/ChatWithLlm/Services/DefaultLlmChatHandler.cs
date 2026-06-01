@@ -456,7 +456,11 @@ public partial class DefaultLlmChatHandler : ILlmChatHandler
     {
         var roundUtcDate = DateTimeOffset.FromUnixTimeSeconds(_timeProvider.GetUtcNow().ToUnixTimeSeconds());
         var formattedDate = roundUtcDate.ToString("O", RuCulture);
-        var basePrompt = $"""
+        var basePrompt = _options.SystemPromptTemplate is { Length: > 0 } template
+            ? template
+                .Replace("{BotName}", _options.BotName, StringComparison.Ordinal)
+                .Replace("{CurrentDateUtc}", formattedDate, StringComparison.Ordinal)
+            : $"""
                           Ты - полезный чат-бот в групповом чате, тебя зовут ${_options.BotName}.
 
                           Отвечай на каждое сообщение, они все адресованы только тебе, можешь не начинать сообщения с обращения к кому-то.

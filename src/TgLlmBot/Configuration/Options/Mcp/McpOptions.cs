@@ -1,15 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations;
-
 namespace TgLlmBot.Configuration.Options.Mcp;
 
 public class McpOptions
 {
-    [Required]
-    public McpGithubOptions Github { get; set; } = default!;
+    // Each server is optional: omit its section to skip launching it and registering its tools.
+    public McpGithubOptions? Github { get; set; }
 
-    [Required]
-    public McpBraveOptions Brave { get; set; } = default!;
+    public McpBraveOptions? Brave { get; set; }
 
-    [Required]
-    public McpContext7Options Context7 { get; set; } = default!;
+    public McpContext7Options? Context7 { get; set; }
 }

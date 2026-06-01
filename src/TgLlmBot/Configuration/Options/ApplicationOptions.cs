@@ -19,6 +19,6 @@ public class ApplicationOptions
     [Required]
     public DataAccessOptions DataAccess { get; set; } = default!;
 
-    [Required]
-    public McpOptions Mcp { get; set; } = default!;
+    // Optional: omit the whole "Mcp" section (or any individual server below) to disable it.
+    public McpOptions? Mcp { get; set; }
 }
