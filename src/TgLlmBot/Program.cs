@@ -264,6 +264,11 @@ public partial class Program
                     options.MigrationsAssembly(typeof(DesignTimeBotDbContextFactory).Assembly);
                 });
         });
+        builder.Services.AddSingleton(new DefaultTelegramMessageStorageOptions(
+            config.Llm.ContextMode,
+            config.Telegram.BotName,
+            config.Llm.ContextMaxMessages,
+            config.Llm.ContextMaxCharacters));
         builder.Services.AddSingleton<ITelegramMessageStorage, DefaultTelegramMessageStorage>();
         builder.Services.AddSingleton<ITelegramKickedUsersStorage, DefaultTelegramKickedUsersStorage>();
         builder.Services.AddSingleton<ISystemPromptService, DefaultSystemPromptService>();

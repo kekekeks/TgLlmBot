@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using TgLlmBot.Configuration.Options.Llm;
+using TgLlmBot.Services.DataAccess.TelegramMessages;
 
 namespace TgLlmBot.Configuration.TypedConfiguration.Llm;
 
@@ -11,7 +12,10 @@ public class LlmConfiguration
         string apiKey,
         string model,
         string defaultResponse,
-        string? systemPromptTemplate)
+        string? systemPromptTemplate,
+        ContextSelectionMode contextMode,
+        int contextMaxMessages,
+        int contextMaxCharacters)
     {
         ArgumentNullException.ThrowIfNull(endpoint);
         if (string.IsNullOrEmpty(apiKey))
@@ -34,6 +38,9 @@ public class LlmConfiguration
         Model = model;
         DefaultResponse = defaultResponse;
         SystemPromptTemplate = systemPromptTemplate;
+        ContextMode = contextMode;
+        ContextMaxMessages = contextMaxMessages;
+        ContextMaxCharacters = contextMaxCharacters;
     }
 
     public Uri Endpoint { get; }
@@ -43,6 +50,13 @@ public class LlmConfiguration
 
     // Contents of the configured system prompt file, or null to use the built-in default.
     public string? SystemPromptTemplate { get; }
+
+    // How chat history is selected for LLM context.
+    public ContextSelectionMode ContextMode { get; }
+
+    // Caps on how much chat history is selected for context.
+    public int ContextMaxMessages { get; }
+    public int ContextMaxCharacters { get; }
 
     public static LlmConfiguration Convert(LlmOptions options)
     {
@@ -65,11 +79,21 @@ public class LlmConfiguration
             systemPromptTemplate = File.ReadAllText(options.SystemPromptPath);
         }
 
+        var contextMode = ContextSelectionMode.Full;
+        if (!string.IsNullOrWhiteSpace(options.ContextMode)
+            && (!Enum.TryParse(options.ContextMode, ignoreCase: true, out contextMode) || !Enum.IsDefined(contextMode)))
+        {
+            throw new ArgumentException($"Invalid context mode '{options.ContextMode}'.", nameof(options));
+        }
+
         return new(
             typedEndpoint,
             options.ApiKey,
             options.Model,
             options.DefaultResponse,
-            systemPromptTemplate);
+            systemPromptTemplate,
+            contextMode,
+            options.ContextMaxMessages ?? 300,
+            options.ContextMaxCharacters ?? 50000);
     }
 }
