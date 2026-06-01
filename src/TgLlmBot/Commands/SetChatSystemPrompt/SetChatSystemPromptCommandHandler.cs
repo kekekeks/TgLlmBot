@@ -17,20 +17,24 @@ namespace TgLlmBot.Commands.SetChatSystemPrompt;
 public class SetChatSystemPromptCommandHandler : AbstractCommandHandler<SetChatSystemPromptCommand>
 {
     private readonly TelegramBotClient _bot;
+    private readonly string _commandToken;
     private readonly ITelegramMessageStorage _storage;
     private readonly ISystemPromptService _systemPrompt;
 
     public SetChatSystemPromptCommandHandler(
         TelegramBotClient bot,
         ISystemPromptService systemPrompt,
-        ITelegramMessageStorage storage)
+        ITelegramMessageStorage storage,
+        CommandPrefixOptions commandPrefixOptions)
     {
         ArgumentNullException.ThrowIfNull(bot);
         ArgumentNullException.ThrowIfNull(systemPrompt);
         ArgumentNullException.ThrowIfNull(storage);
+        ArgumentNullException.ThrowIfNull(commandPrefixOptions);
         _bot = bot;
         _systemPrompt = systemPrompt;
         _storage = storage;
+        _commandToken = $"{commandPrefixOptions.CommandPrefix}chat_role";
     }
 
     [SuppressMessage("Design", "CA1031:Do not catch general exception types")]
@@ -41,9 +45,9 @@ public class SetChatSystemPromptCommandHandler : AbstractCommandHandler<SetChatS
         try
         {
             var prompt = $"{command.Message.Text?.Trim()}".Trim();
-            if (prompt.StartsWith("!chat_role", StringComparison.Ordinal))
+            if (prompt.StartsWith(_commandToken, StringComparison.OrdinalIgnoreCase))
             {
-                prompt = prompt["!chat_role".Length..].Trim();
+                prompt = prompt[_commandToken.Length..].Trim();
             }
 
             var isAdmin = await IsAdminMessageAsync(command, cancellationToken);

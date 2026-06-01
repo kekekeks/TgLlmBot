@@ -17,6 +17,7 @@ namespace TgLlmBot.Commands.SetLimit;
 public class SetLimitCommandHandler : AbstractCommandHandler<SetLimitCommand>
 {
     private readonly TelegramBotClient _bot;
+    private readonly string _commandToken;
     private readonly ILlmLimitsService _limitsService;
     private readonly ITelegramMarkdownConverter _markdownConverter;
     private readonly ITelegramMessageStorage _storage;
@@ -25,16 +26,19 @@ public class SetLimitCommandHandler : AbstractCommandHandler<SetLimitCommand>
         TelegramBotClient bot,
         ITelegramMessageStorage storage,
         ILlmLimitsService limitsService,
-        ITelegramMarkdownConverter markdownConverter)
+        ITelegramMarkdownConverter markdownConverter,
+        CommandPrefixOptions commandPrefixOptions)
     {
         ArgumentNullException.ThrowIfNull(bot);
         ArgumentNullException.ThrowIfNull(storage);
         ArgumentNullException.ThrowIfNull(limitsService);
         ArgumentNullException.ThrowIfNull(markdownConverter);
+        ArgumentNullException.ThrowIfNull(commandPrefixOptions);
         _bot = bot;
         _storage = storage;
         _limitsService = limitsService;
         _markdownConverter = markdownConverter;
+        _commandToken = $"{commandPrefixOptions.CommandPrefix}set_limit";
     }
 
     public override async Task HandleAsync(SetLimitCommand command, CancellationToken cancellationToken)
@@ -44,7 +48,7 @@ public class SetLimitCommandHandler : AbstractCommandHandler<SetLimitCommand>
         if (isAdmin)
         {
             var commandText = $"{command.Message.Text?.Trim()}"
-                .Replace("!set_limit", string.Empty, StringComparison.Ordinal)
+                .Replace(_commandToken, string.Empty, StringComparison.OrdinalIgnoreCase)
                 .Trim();
             if (int.TryParse(commandText, out var limit) && limit >= 0)
             {

@@ -13,17 +13,20 @@ namespace TgLlmBot.Commands.SetPersonalSystemPrompt;
 public class SetPersonalSystemPromptCommandHandler : AbstractCommandHandler<SetPersonalSystemPromptCommand>
 {
     private readonly TelegramBotClient _bot;
+    private readonly string _commandToken;
     private readonly ITelegramMessageStorage _storage;
     private readonly ISystemPromptService _systemPrompt;
 
-    public SetPersonalSystemPromptCommandHandler(TelegramBotClient bot, ISystemPromptService systemPrompt, ITelegramMessageStorage storage)
+    public SetPersonalSystemPromptCommandHandler(TelegramBotClient bot, ISystemPromptService systemPrompt, ITelegramMessageStorage storage, CommandPrefixOptions commandPrefixOptions)
     {
         ArgumentNullException.ThrowIfNull(bot);
         ArgumentNullException.ThrowIfNull(systemPrompt);
         ArgumentNullException.ThrowIfNull(storage);
+        ArgumentNullException.ThrowIfNull(commandPrefixOptions);
         _bot = bot;
         _systemPrompt = systemPrompt;
         _storage = storage;
+        _commandToken = $"{commandPrefixOptions.CommandPrefix}personal_role";
     }
 
     [SuppressMessage("Design", "CA1031:Do not catch general exception types")]
@@ -34,9 +37,9 @@ public class SetPersonalSystemPromptCommandHandler : AbstractCommandHandler<SetP
         try
         {
             var prompt = $"{command.Message.Text?.Trim()}".Trim();
-            if (prompt.StartsWith("!personal_role", StringComparison.Ordinal))
+            if (prompt.StartsWith(_commandToken, StringComparison.OrdinalIgnoreCase))
             {
-                prompt = prompt["!personal_role".Length..].Trim();
+                prompt = prompt[_commandToken.Length..].Trim();
             }
 
             if (string.IsNullOrWhiteSpace(prompt) || command.Message.From is null)

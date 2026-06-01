@@ -19,6 +19,7 @@ using OpenAI.Chat;
 using Telegram.Bot;
 using TgLlmBot.BackgroundServices;
 using TgLlmBot.CommandDispatcher;
+using TgLlmBot.Commands;
 using TgLlmBot.Commands.ChatWithLlm;
 using TgLlmBot.Commands.ChatWithLlm.BackgroundServices.LlmRequests;
 using TgLlmBot.Commands.ChatWithLlm.Services;
@@ -178,7 +179,8 @@ public partial class Program
         builder.Services.AddSingleton(new DefaultTelegramCommandDispatcherOptions(config.Telegram.BotName, config.Telegram.CommandPrefix));
         builder.Services.AddSingleton<ITelegramCommandDispatcher, DefaultTelegramCommandDispatcher>();
         // Command handlers
-        builder.Services.AddSingleton(new DisplayHelpCommandHandlerOptions(config.Telegram.BotName));
+        builder.Services.AddSingleton(new CommandPrefixOptions(config.Telegram.CommandPrefix));
+        builder.Services.AddSingleton(new DisplayHelpCommandHandlerOptions(config.Telegram.BotName, config.Telegram.CommandPrefix));
         builder.Services.AddSingleton<DisplayHelpCommandHandler>();
         builder.Services.AddSingleton<ChatWithLlmCommandHandler>();
         builder.Services.AddSingleton(new ModelCommandHandlerOptions(config.Llm.Endpoint, config.Llm.Model));
