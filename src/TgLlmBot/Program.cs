@@ -2,6 +2,7 @@ using System;
 using System.ClientModel;
 using System.ClientModel.Primitives;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Channels;
@@ -15,7 +16,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using ModelContextProtocol.Client;
 using OpenAI;
-using OpenAI.Chat;
 using Telegram.Bot;
 using TgLlmBot.BackgroundServices;
 using TgLlmBot.CommandDispatcher;
@@ -51,6 +51,7 @@ using TgLlmBot.Services.Mcp.Clients.Github;
 using TgLlmBot.Services.Mcp.Enums;
 using TgLlmBot.Services.Mcp.Tools;
 using TgLlmBot.Services.OpenAIClient.Costs;
+using TgLlmBot.Services.OpenAIClient.Fallback;
 using TgLlmBot.Services.OpenAIClient.HttpClient.DelegatingHandlers;
 using TgLlmBot.Services.OpenRouter;
 using TgLlmBot.Services.Telegram.Markdown;
@@ -235,23 +236,34 @@ public partial class Program
                     Transport = new HttpClientPipelineTransport(httpClient, true, loggerFactory)
                 });
         });
-        builder.Services.AddSingleton(resolver =>
+        builder.Services.AddSingleton<IChatClient>(resolver =>
         {
             var openAiClient = resolver.GetRequiredService<OpenAIClient>();
-            return openAiClient.GetChatClient(config.Llm.Model);
-        });
-        builder.Services.AddSingleton(resolver =>
-        {
-            var chatClient = resolver.GetRequiredService<ChatClient>();
             var loggerFactory = resolver.GetRequiredService<ILoggerFactory>();
-            return chatClient.AsIChatClient()
+
+            IChatClient BuildForModel(string model) => openAiClient.GetChatClient(model)
+                .AsIChatClient()
                 .AsBuilder()
                 .UseLogging(loggerFactory)
                 .UseFunctionInvocation()
                 .Build();
+
+            var freeClients = config.Llm.FreeModels
+                .Select(model => new NamedChatClient(model, BuildForModel(model)))
+                .ToArray();
+            var mainClient = BuildForModel(config.Llm.Model);
+            if (freeClients.Length == 0)
+            {
+                return mainClient;
+            }
+
+            return new FallbackChatClient(
+                freeClients,
+                mainClient,
+                loggerFactory.CreateLogger<FallbackChatClient>());
         });
         // LLM Chat
-        builder.Services.AddSingleton(new DefaultLlmChatHandlerOptions(config.Telegram.BotName, config.Llm.DefaultResponse, config.Llm.SystemPromptTemplate));
+        builder.Services.AddSingleton(new DefaultLlmChatHandlerOptions(config.Telegram.BotName, config.Llm.DefaultResponse, config.Llm.SystemPromptTemplate, config.Llm.FreeModels));
         builder.Services.AddSingleton<ILlmChatHandler, DefaultLlmChatHandler>();
         // DataAccess
         builder.Services.AddDbContext<BotDbContext>(dbContextOptions =>

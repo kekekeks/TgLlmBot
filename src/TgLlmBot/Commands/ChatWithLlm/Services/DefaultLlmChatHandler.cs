@@ -146,23 +146,28 @@ public partial class DefaultLlmChatHandler : ILlmChatHandler
                 llmResponseText = _options.DefaultResponse;
             }
 
-            // costs
-            var costInUsd = 0m;
-            if (_costContextStorage.TryGetCost(out var cost))
+            // footer: when a free model answered, show its name; otherwise show the cost estimate
+            string? rawFooterText = null;
+            if (llmResponse.ModelId is { } modelId && _options.FreeModels.Contains(modelId))
             {
-                costInUsd = cost.Value;
+                rawFooterText = $"[Model: {modelId}]";
+            }
+            else if (_costContextStorage.TryGetCost(out var cost) && cost.Value > 0m)
+            {
+                rawFooterText = $"[Cost: {cost.Value} USD]";
             }
 
-            var costTextPresent = false;
-            var rawCostText = $"[Cost: {costInUsd} USD]";
-            var markdownCostText = _telegramMarkdownConverter.ConvertToSolidTelegramMarkdown(rawCostText);
+            var footerTextPresent = false;
+            var markdownFooterText = rawFooterText is null
+                ? null
+                : _telegramMarkdownConverter.ConvertToSolidTelegramMarkdown(rawFooterText);
             try
             {
                 var finalText = _telegramMarkdownConverter.ConvertToPartedTelegramMarkdown(llmResponseText, 2000);
-                if (costInUsd > 0m)
+                if (markdownFooterText is not null)
                 {
-                    finalText[^1] += $"\n\n{markdownCostText}";
-                    costTextPresent = true;
+                    finalText[^1] += $"\n\n{markdownFooterText}";
+                    footerTextPresent = true;
                 }
 
                 _typingStatusService.StopTyping(command.Message.Chat.Id);
@@ -193,9 +198,9 @@ public partial class DefaultLlmChatHandler : ILlmChatHandler
                             cancellationToken: cancellationToken);
                     }
 
-                    if (!string.IsNullOrEmpty(response.Text) && costTextPresent && lastPart)
+                    if (!string.IsNullOrEmpty(response.Text) && footerTextPresent && lastPart && markdownFooterText is not null)
                     {
-                        response.Text = response.Text[..^markdownCostText.Length].Trim();
+                        response.Text = response.Text[..^markdownFooterText.Length].Trim();
                     }
 
                     await _storage.StoreMessageAsync(response, command.Self, cancellationToken);
@@ -206,10 +211,10 @@ public partial class DefaultLlmChatHandler : ILlmChatHandler
                 Log.MarkdownConversionOrSendFailed(_logger, ex);
                 _typingStatusService.StopTyping(command.Message.Chat.Id);
                 var finalText = llmResponseText;
-                if (costInUsd > 0m)
+                if (rawFooterText is not null)
                 {
-                    finalText += $"\n\n{rawCostText}";
-                    costTextPresent = true;
+                    finalText += $"\n\n{rawFooterText}";
+                    footerTextPresent = true;
                 }
 
                 var response = await _bot.SendMessage(
@@ -223,9 +228,9 @@ public partial class DefaultLlmChatHandler : ILlmChatHandler
                     cancellationToken: cancellationToken);
                 if (!string.IsNullOrEmpty(response.Text))
                 {
-                    if (costTextPresent)
+                    if (footerTextPresent && rawFooterText is not null)
                     {
-                        response.Text = response.Text[..^rawCostText.Length].Trim();
+                        response.Text = response.Text[..^rawFooterText.Length].Trim();
                     }
                 }
 

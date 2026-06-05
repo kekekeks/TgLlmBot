@@ -17,6 +17,11 @@ public class LlmOptions
     [MaxLength(10000)]
     public string Model { get; set; } = default!;
 
+    // Optional: models that are tried (in order) before falling back to Model.
+    // When all of them reply with HTTP 429 (rate limited), the request is retried with Model.
+    // When a free model answers, its name is shown instead of the cost estimate.
+    public string[]? FreeModels { get; set; }
+
     [Required]
     [MaxLength(10000)]
     public string DefaultResponse { get; set; } = default!;

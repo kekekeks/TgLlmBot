@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using TgLlmBot.Configuration.Options.Llm;
 using TgLlmBot.Services.DataAccess.TelegramMessages;
 
@@ -11,6 +13,7 @@ public class LlmConfiguration
         Uri endpoint,
         string apiKey,
         string model,
+        IReadOnlyList<string> freeModels,
         string defaultResponse,
         string? systemPromptTemplate,
         ContextSelectionMode contextMode,
@@ -33,9 +36,12 @@ public class LlmConfiguration
             throw new ArgumentException("Value cannot be null or empty.", nameof(defaultResponse));
         }
 
+        ArgumentNullException.ThrowIfNull(freeModels);
+
         Endpoint = endpoint;
         ApiKey = apiKey;
         Model = model;
+        FreeModels = freeModels;
         DefaultResponse = defaultResponse;
         SystemPromptTemplate = systemPromptTemplate;
         ContextMode = contextMode;
@@ -46,6 +52,9 @@ public class LlmConfiguration
     public Uri Endpoint { get; }
     public string ApiKey { get; }
     public string Model { get; }
+
+    // Models tried (in order) before falling back to Model when they are rate limited.
+    public IReadOnlyList<string> FreeModels { get; }
     public string DefaultResponse { get; }
 
     // Contents of the configured system prompt file, or null to use the built-in default.
@@ -86,10 +95,18 @@ public class LlmConfiguration
             throw new ArgumentException($"Invalid context mode '{options.ContextMode}'.", nameof(options));
         }
 
+        var freeModels = options.FreeModels is null
+            ? Array.Empty<string>()
+            : options.FreeModels
+                .Where(static x => !string.IsNullOrWhiteSpace(x))
+                .Select(static x => x.Trim())
+                .ToArray();
+
         return new(
             typedEndpoint,
             options.ApiKey,
             options.Model,
+            freeModels,
             options.DefaultResponse,
             systemPromptTemplate,
             contextMode,
